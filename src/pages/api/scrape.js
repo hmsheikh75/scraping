@@ -102,88 +102,66 @@ export default async function handler(req, res) {
             try {
               console.log(`Opening case: ${link.text}`);
           
-              // ✅ Click the judgment link and wait for modal
+              // Click the judgment link and wait for modal
               const element = await page.$(`a[onclick*="'${link.base64_id}',"]`);
               if (element) {
                 await element.click();
-                await new Promise(resolve => setTimeout(resolve, 2000)); // ✅ Allow extra time for modal to load
+                await new Promise(resolve => setTimeout(resolve, 2000)); // Allow extra time for modal to load
           
-                // ✅ Ensure the modal appears
-                await page.waitForSelector(".modal-content", { timeout: 60000 });
+                         
+                console.log(`Successfully opened case: ${link.text}`);
           
-                // ✅ Wait until modal content is fully loaded
-                await page.waitForFunction(() => {
-                  return document.querySelector(".modal-content")?.innerText.length > 0;
-                }, { timeout: 60000 });
-          
-                console.log(`✅ Successfully opened case: ${link.text}`);
-          
-                // ✅ Extract judgment details
-                // ✅ Extract judgment details
-        const details = await page.evaluate(() => {
-          const getTableData = (labelText) => {
-            const rows = Array.from(document.querySelectorAll(".table-responsive table tbody tr"));
-            const row = rows.find(tr => tr.children[0]?.innerText.trim() === labelText);
-            return row ? row.children[1]?.innerText.trim() || "N/A" : "N/A";
-          };
+                // Extract judgment details
+                // Extract judgment details
+                  const details = await page.evaluate(() => {
+                    const getTableData = (labelText) => {
+                      const rows = Array.from(document.querySelectorAll(".table-responsive table tbody tr"));
+                      const row = rows.find(tr => tr.children[0]?.innerText.trim() === labelText);
+                      return row ? row.children[1]?.innerText.trim() || "N/A" : "N/A";
+                    };
 
-          const getHeader5Data = (headerText) => {
-            const divs = Array.from(document.querySelectorAll(".view-keyword"));
-            const div = divs.find(div => div.children[0]?.innerText.trim() === headerText);
-            return div ? div.children[1]?.innerText.trim() || "N/A" : "N/A";
-          };
+                    const getHeader5Data = (headerText) => {
+                      const divs = Array.from(document.querySelectorAll(".view-keyword"));
+                      const div = divs.find(div => div.children[0]?.innerText.trim() === headerText);
+                      return div ? div.children[1]?.innerText.trim() || "N/A" : "N/A";
+                    };
 
-          return {
-            scr_citation: getTableData("SCR Citation:"),
-            year_volume: getTableData("Year/Volume:"),
-            date_of_judgment: getTableData("Date of Judgment:"),
-            petitioner: getTableData("Petitioner:"),
-            disposal_nature: getTableData("Disposal Nature:"),
-            neutral_citation: getTableData("Neutral Citation:"),
-            judgment_delivered_by: getTableData("Judgment Delivered by:"),
-            respondent: getTableData("Respondent:"),
-            case_type: getTableData("Case Type:"),
-            order_judgment: getTableData("Order/Judgment:"),
-            headnote: getHeader5Data("1. Headnote"),
-            //case_referred: getHeader5Data("2. Case referred"),
-            act: getHeader5Data("3. Act"),
-            keyword: getHeader5Data("4. Keyword"),
-          };
-        });
+                    return {
+                      scr_citation: getTableData("SCR Citation:"),
+                      year_volume: getTableData("Year/Volume:"),
+                      date_of_judgment: getTableData("Date of Judgment:"),
+                      petitioner: getTableData("Petitioner:"),
+                      disposal_nature: getTableData("Disposal Nature:"),
+                      neutral_citation: getTableData("Neutral Citation:"),
+                      judgment_delivered_by: getTableData("Judgment Delivered by:"),
+                      respondent: getTableData("Respondent:"),
+                      case_type: getTableData("Case Type:"),
+                      order_judgment: getTableData("Order/Judgment:"),
+                      headnote: getHeader5Data("1. Headnote"),
+                      //case_referred: getHeader5Data("2. Case referred"),
+                      act: getHeader5Data("3. Act"),
+                      keyword: getHeader5Data("4. Keyword"),
+                    };
+                  });
 
-        //console.log(`📌 Extracted Data:`, details);
-        yearData.push({ ...link, details });
+                  //console.log(` Extracted Data:`, details);
+                  yearData.push({ ...link, details });
 
-          
-        // ✅ Close modal before moving to the next case
-          console.log("🚪 Attempting to close modal...");
-          await page.evaluate(() => {
-            const closeButton = document.querySelector("button[onclick='goback()']");
-            if (closeButton) {
-              console.log("🔘 Clicking Go Back button...");
-              closeButton.click();
-            } else if (typeof goback === "function") {
-              console.log("📌 Calling goback() function...");
-              goback();
-            } else {
-              console.warn("⚠️ Could not find Go Back button or goback() function!");
-            }
-          });
-
-        
-
-        await new Promise(resolve => setTimeout(resolve, 2000));
-
-        
-
-          
+                   
+                  // Close modal before moving to the next case
+                  await page.evaluate(() => {
+                  if (typeof goback_filter() === "function") {
+                      goback_filter();
+                    }
+                  });
+                  await new Promise(resolve => setTimeout(resolve, 2000));
               } else {
-                console.warn(`❌ Element not found for ID: ${link.base64_id}`);
+                console.warn(`Element not found for ID: ${link.base64_id}`);
                 continue;
               }
           
             } catch (error) {
-              console.error(`❌ Error processing case: ${link.text}`, error);
+              console.error(`Error processing case: ${link.text}`, error);
             }
           }
           
@@ -192,7 +170,7 @@ export default async function handler(req, res) {
 
       const filePath = path.join(dataDir, `${year.text}.json`);
       await fs.writeJson(filePath, yearData);
-      console.log(`✅ Saved data for Year: ${year.text}`);
+      console.log(`Saved data for Year: ${year.text}`);
     }
 
     await browser.close();
