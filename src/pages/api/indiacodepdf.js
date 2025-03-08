@@ -71,7 +71,6 @@ export default async function handler(req, res) {
 
     // 🔄 Scrape Acts for Each Year
     for (let { year, url } of allYears) {
-      if(year !== "2024") continue;
       console.log(`Fetching acts for year: ${year}`);
       console.log(`🔗 Navigating to ${url}...`);
       const browser = await puppeteer.launch({ headless: false });
@@ -109,49 +108,32 @@ export default async function handler(req, res) {
           })
           .filter(act => act.view_link);
       });
-      let actDetails = [];
+
       // Visit each act’s "View" link to get PDFs
       for (let act of acts) {
         if (!act.view_link) continue;
 
         const actPage = await browser.newPage();
         await actPage.goto(act.view_link, { waitUntil: 'networkidle2' });
-        await new Promise(resolve => setTimeout(resolve, 2000));
-        // Ensure the page has loaded content
-        //await actPage.waitForSelector('.headingtwo', { timeout: 5000 });
 
-        //const sectionExists = await actPage.$('myTableAppendixTab');
-
-      //if (!sectionExists) {
-        //console.warn(`No section found for ${act.short_title}. Skipping...`);
-        //await actPage.close();
-        //continue;
-      //}
-
-        // Extract chapter and section details
-        const chapters = await actPage.evaluate(() => {
-          let chapterElements = Array.from(document.querySelectorAll('li > b'));
-          
-          if (chapterElements.length === 0) {
-            
-            return []; // No chapters found
-          }
-
-          return chapterElements.map(chapter => {
-            let chapterTitle = chapter.textContent.trim();
-            let sections = Array.from(chapter.closest('li')?.querySelectorAll('a.headingtwo') || []).map(a => ({
-              title: a.textContent.trim(),
-              id: a.id
-            }));
-            return { chapterTitle, sections };
-          });
+        const pdfLinks = await actPage.evaluate(() => {
+          return Array.from(document.querySelectorAll('a[href*="/bitstream/"]')).map(link => ({
+            title: link.textContent.trim(),
+            url: link.href.startsWith('/') ? `https://www.indiacode.nic.in${link.getAttribute('href')}` : link.href
+          }));
         });
-        console.log("Extracted Chapters:", JSON.stringify(chapters, null, 2));
-        actDetails.push({
-          ...act,
-          chapters
-        });
-      console.log(actDetails.chapters);
+
+        act.pdfs = pdfLinks;
+        console.log(`📄 Found ${pdfLinks.length} PDFs for ${act.short_title}`);
+
+        // 🔄 Download PDFs
+        for (let pdf of pdfLinks) {
+          const fileName = pdf.url.split('/').pop();
+          const filePath = path.join(process.cwd(), 'public', 'indiacode', fileName);
+          await downloadPDF(pdf.url, filePath);
+          pdf.local_path = `/indiacode/${fileName}`;
+        }
+
         await actPage.close();
       }
 

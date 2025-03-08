@@ -64,8 +64,7 @@ export default async function handler(req, res) {
     for (const volume of volumes) {
       try {
       await page.select('select[name="volume"]', volume.value);
-      
-      
+      await page.evaluate(() => document.querySelector('select[name="volume"]').dispatchEvent(new Event('change')));
       await new Promise(resolve => setTimeout(resolve, 2000));
       } catch (error) {
         console.error(`❌ Error selecting volume: ${volume.text}`, error);
@@ -106,12 +105,12 @@ export default async function handler(req, res) {
         console.log(`📌 Processing Part: ${part.value}`);
         // Wait only if the dropdown is present
         //await new Promise(resolve => setTimeout(resolve, 2000));
-        //await page.select('select[name="partno"]', part.value);
+        await page.select('select[name="partno"]', part.value);
          // Set a shorter timeout to avoid hanging
         // await page.waitForSelector('select[name="partno"]', { timeout: 10000 }).catch(() => {
         //   console.log("⚠️ Part dropdown did not appear. Skipping parts selection.");
         // });
-        //await page.evaluate(() => document.querySelector('select[name="partno"]').dispatchEvent(new Event('change')));
+        await page.evaluate(() => document.querySelector('select[name="partno"]').dispatchEvent(new Event('change')));
         
         await new Promise(resolve => setTimeout(resolve, 3000));
 
